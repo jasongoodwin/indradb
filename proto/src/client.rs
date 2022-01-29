@@ -82,7 +82,7 @@ impl<T> From<mpsc::error::SendError<T>> for ClientError {
 /// IndraDB, but they cannot implement them directly since the functions here
 /// are async.
 #[derive(Clone)]
-pub struct Client(crate::ProtoClient<Channel>);
+pub struct Client(pub crate::ProtoClient<Channel>);
 
 impl Client {
     /// Creates a new client.
