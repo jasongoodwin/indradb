@@ -5,88 +5,89 @@ use crate::traits::Datastore;
 
 use test::Bencher;
 
-pub fn bench_create_vertex<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
+pub async fn bench_create_vertex<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
     let t = Identifier::new("bench_create_vertex").unwrap();
 
-    b.iter(|| {
+    for _ in b {
         let v = Vertex::new(t.clone());
-        datastore.create_vertex(&v).unwrap();
-    });
+        datastore.create_vertex(&v).await.unwrap();
+    }
 }
 
-pub fn bench_get_vertices<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
+pub async fn bench_get_vertices<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
     let id = {
         let t = Identifier::new("bench_get_vertices").unwrap();
         let v = Vertex::new(t);
-        datastore.create_vertex(&v).unwrap();
+        datastore.create_vertex(&v).await.unwrap();
         v.id
     };
 
-    b.iter(|| {
+    for _ in b {
         let q = SpecificVertexQuery::single(id);
-        datastore.get_vertices(q.into()).unwrap();
-    });
+        datastore.get_vertices(q.into()).await.unwrap();
+    }
 }
 
-pub fn bench_create_edge<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
-    let t = Identifier::new("bench_create_edge").unwrap();
+pub async fn bench_create_edge<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
+    let t = Identifier::new("bench_create_edge").await.unwrap();
 
     let (outbound_id, inbound_id) = {
         let outbound_v = Vertex::new(t.clone());
         let inbound_v = Vertex::new(t.clone());
-        datastore.create_vertex(&outbound_v).unwrap();
-        datastore.create_vertex(&inbound_v).unwrap();
+        datastore.create_vertex(&outbound_v).await.unwrap();
+        datastore.create_vertex(&inbound_v).await.unwrap();
         (outbound_v.id, inbound_v.id)
     };
 
-    b.iter(|| {
+    for _ in b {
         let k = EdgeKey::new(outbound_id, t.clone(), inbound_id);
-        datastore.create_edge(&k).unwrap();
-    });
+        datastore.create_edge(&k).await.unwrap();
+    }
 }
 
-pub fn bench_get_edges<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
+pub async fn bench_get_edges<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
     let t = Identifier::new("bench_get_edges").unwrap();
 
     let key = {
         let outbound_v = Vertex::new(t.clone());
         let inbound_v = Vertex::new(t.clone());
-        datastore.create_vertex(&outbound_v).unwrap();
-        datastore.create_vertex(&inbound_v).unwrap();
+        datastore.create_vertex(&outbound_v).await.unwrap();
+        datastore.create_vertex(&inbound_v).await.unwrap();
         let key = EdgeKey::new(outbound_v.id, t.clone(), inbound_v.id);
-        datastore.create_edge(&key).unwrap();
+        datastore.create_edge(&key).await.unwrap();
         key
     };
 
-    b.iter(|| {
+    for _ in b {
         let q = SpecificEdgeQuery::single(key.clone());
-        datastore.get_edges(q.into()).unwrap();
-    });
+        datastore.get_edges(q.into()).await.unwrap();
+    }
 }
 
-pub fn bench_get_edge_count<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
+pub async fn bench_get_edge_count<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
     let t = Identifier::new("bench_get_edge_count").unwrap();
 
     let outbound_id = {
         let outbound_v = Vertex::new(t.clone());
         let inbound_v = Vertex::new(t.clone());
-        datastore.create_vertex(&outbound_v).unwrap();
-        datastore.create_vertex(&inbound_v).unwrap();
+        datastore.create_vertex(&outbound_v).await.unwrap();
+        datastore.create_vertex(&inbound_v).await.unwrap();
         let key = EdgeKey::new(outbound_v.id, t.clone(), inbound_v.id);
-        datastore.create_edge(&key).unwrap();
+        datastore.create_edge(&key).await.unwrap();
         outbound_v.id
     };
 
-    b.iter(|| {
+    for _ in b {
         datastore
             .get_edge_count(outbound_id, Some(&t), EdgeDirection::Outbound)
+            .await
             .unwrap();
-    });
+    }
 }
 
 const BULK_INSERT_COUNT: usize = 100;
 
-pub fn bench_bulk_insert<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
+pub async fn bench_bulk_insert<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
     let t = Identifier::new("bench_bulk_insert").unwrap();
 
     let mut vertices = Vec::with_capacity(BULK_INSERT_COUNT);
@@ -120,7 +121,7 @@ pub fn bench_bulk_insert<D: Datastore>(b: &mut Bencher, datastore: &mut D) {
         ));
     }
 
-    b.iter(|| {
-        datastore.bulk_insert(items.clone()).unwrap();
-    });
+    for _ in b {
+        datastore.bulk_insert(items.clone()).await.unwrap();
+    }
 }

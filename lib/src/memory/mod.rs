@@ -14,8 +14,8 @@ full_bench_impl!(MemoryDatastore::default());
 full_test_impl!(MemoryDatastore::default());
 
 #[cfg(feature = "test-suite")]
-#[test]
-fn should_serialize() {
+#[tokio::test]
+async fn should_serialize() {
     use super::MemoryDatastore;
     use crate::{Datastore, Identifier, SpecificVertexQuery};
     use tempfile::NamedTempFile;
@@ -24,7 +24,7 @@ fn should_serialize() {
 
     let id = {
         let datastore = MemoryDatastore::create(path.path()).unwrap();
-        let id = datastore.create_vertex_from_type(Identifier::default()).unwrap();
+        let id = datastore.create_vertex_from_type(Identifier::default()).await.unwrap();
         datastore.sync().unwrap();
         id
     };
@@ -33,6 +33,7 @@ fn should_serialize() {
     assert_eq!(datastore.get_vertex_count().unwrap(), 1);
     let vertices = datastore
         .get_vertices(SpecificVertexQuery::new(vec![id]).into())
+        .await
         .unwrap();
     assert_eq!(vertices.len(), 1);
     assert_eq!(vertices[0].id, id);

@@ -5,15 +5,15 @@ use crate::{models, Datastore, EdgeQueryExt, RangeVertexQuery, SpecificVertexQue
 
 use uuid::Uuid;
 
-pub fn should_create_vertex_from_type<D: Datastore>(datastore: &D) {
+pub async fn should_create_vertex_from_type<D: Datastore>(datastore: &D) {
     let t = models::Identifier::new("test_vertex_type").unwrap();
-    datastore.create_vertex_from_type(t).unwrap();
+    datastore.create_vertex_from_type(t).await.unwrap();
 }
 
-pub fn should_get_range_vertices<D: Datastore>(datastore: &D) {
-    let mut inserted_ids = create_vertices(datastore);
+pub async fn should_get_range_vertices<D: Datastore>(datastore: &D) {
+    let mut inserted_ids = create_vertices(datastore).await;
 
-    let range = datastore.get_vertices(RangeVertexQuery::new().into()).unwrap();
+    let range = datastore.get_vertices(RangeVertexQuery::new().into()).await.unwrap();
 
     assert!(range.len() >= 5);
 
@@ -30,14 +30,14 @@ pub fn should_get_range_vertices<D: Datastore>(datastore: &D) {
     }
 }
 
-pub fn should_get_no_vertices_with_zero_limit<D: Datastore>(datastore: &D) {
-    create_vertices(datastore);
+pub async fn should_get_no_vertices_with_zero_limit<D: Datastore>(datastore: &D) {
+    create_vertices(datastore.await);
     let range = datastore.get_vertices(RangeVertexQuery::new().limit(0).into()).unwrap();
     assert_eq!(range.len(), 0);
 }
 
 pub fn should_get_range_vertices_out_of_range<D: Datastore>(datastore: &D) {
-    create_vertices(datastore);
+    create_vertices(datastore).await;
     let range = datastore
         .get_vertices(
             RangeVertexQuery::new()
@@ -50,7 +50,7 @@ pub fn should_get_range_vertices_out_of_range<D: Datastore>(datastore: &D) {
 
 pub fn should_get_no_vertices_with_type_filter<D: Datastore>(datastore: &D) {
     let type_filter = models::Identifier::new("foo").unwrap();
-    create_vertices(datastore);
+    create_vertices(datastore).await;
     let range = datastore
         .get_vertices(RangeVertexQuery::new().t(type_filter).into())
         .unwrap();
@@ -80,7 +80,7 @@ pub fn should_get_single_vertex_nonexisting<D: Datastore>(datastore: &D) {
 }
 
 pub fn should_get_vertices<D: Datastore>(datastore: &D) {
-    let mut inserted_ids = create_vertices(datastore);
+    let mut inserted_ids = create_vertices(datastore).await;
 
     let range = datastore
         .get_vertices(
@@ -103,13 +103,13 @@ pub fn should_get_vertices<D: Datastore>(datastore: &D) {
     }
 }
 
-pub fn should_get_vertices_piped<D: Datastore>(datastore: &D) {
+pub async fn should_get_vertices_piped<D: Datastore>(datastore: &D) {
     let vertex_t = models::Identifier::new("test_vertex_type").unwrap();
     let edge_t = models::Identifier::new("test_edge_type").unwrap();
 
     let v = models::Vertex::new(vertex_t);
-    datastore.create_vertex(&v).unwrap();
-    let inserted_id = create_edge_from(datastore, v.id);
+    datastore.create_vertex(&v).await.unwrap();
+    let inserted_id = create_edge_from(datastore, v.id).await;
 
     // This query should get `inserted_id`
     let query_1 = SpecificVertexQuery::single(v.id)
@@ -152,54 +152,58 @@ pub fn should_get_vertices_piped<D: Datastore>(datastore: &D) {
     assert_eq!(range[0], v);
 }
 
-pub fn should_delete_a_valid_outbound_vertex<D: Datastore>(datastore: &D) {
-    let (outbound_id, _) = create_edges(datastore);
+pub async fn should_delete_a_valid_outbound_vertex<D: Datastore>(datastore: &D) {
+    let (outbound_id, _) = create_edges(datastore).await;
     let q = SpecificVertexQuery::single(outbound_id);
     datastore
         .set_vertex_properties(
             q.clone().property(models::Identifier::new("foo").unwrap()),
             serde_json::Value::Bool(true),
         )
+        .await
         .unwrap();
-    datastore.delete_vertices(q.clone().into()).unwrap();
-    let v = datastore.get_vertices(q.into()).unwrap();
+    datastore.delete_vertices(q.clone().into()).await.unwrap();
+    let v = datastore.get_vertices(q.into()).await.unwrap();
     assert_eq!(v.len(), 0);
     let t = models::Identifier::new("test_edge_type").unwrap();
     let count = datastore
         .get_edge_count(outbound_id, Some(&t), models::EdgeDirection::Outbound)
+        .await
         .unwrap();
     assert_eq!(count, 0);
 }
 
-pub fn should_delete_a_valid_inbound_vertex<D: Datastore>(datastore: &D) {
-    let (_, inbound_ids) = create_edges(datastore);
+pub async fn should_delete_a_valid_inbound_vertex<D: Datastore>(datastore: &D) {
+    let (_, inbound_ids) = create_edges(datastore).await;
     let inbound_id = inbound_ids[0];
     let q = SpecificVertexQuery::single(inbound_id);
-    datastore.delete_vertices(q.clone().into()).unwrap();
-    let v = datastore.get_vertices(q.into()).unwrap();
+    datastore.delete_vertices(q.clone().into()).await.unwrap();
+    let v = datastore.get_vertices(q.into()).await.unwrap();
     assert_eq!(v.len(), 0);
     let t = models::Identifier::new("test_edge_type").unwrap();
     let count = datastore
         .get_edge_count(inbound_id, Some(&t), models::EdgeDirection::Inbound)
+        .await
         .unwrap();
     assert_eq!(count, 0);
 }
 
-pub fn should_not_delete_an_invalid_vertex<D: Datastore>(datastore: &D) {
+pub async fn should_not_delete_an_invalid_vertex<D: Datastore>(datastore: &D) {
     datastore
         .delete_vertices(SpecificVertexQuery::single(Uuid::default()).into())
+        .await
         .unwrap();
 }
 
-pub fn should_get_a_vertex_count<D: Datastore>(datastore: &D) {
+pub async fn should_get_a_vertex_count<D: Datastore>(datastore: &D) {
     let vertex_t = models::Identifier::new("test_vertex_type").unwrap();
     let v = models::Vertex::new(vertex_t);
-    datastore.create_vertex(&v).unwrap();
-    let count = datastore.get_vertex_count().unwrap();
+    datastore.create_vertex(&v).await.unwrap();
+    let count = datastore.get_vertex_count().await.unwrap();
     assert!(count >= 1);
 }
 
-fn create_vertices<D: Datastore>(datastore: &D) -> Vec<Uuid> {
+async fn create_vertices<D: Datastore>(datastore: &D) -> Vec<Uuid> {
     let t = models::Identifier::new("test_vertex_type").unwrap();
 
     let vertices = vec![
@@ -211,7 +215,7 @@ fn create_vertices<D: Datastore>(datastore: &D) -> Vec<Uuid> {
     ];
 
     for vertex in &vertices {
-        datastore.create_vertex(vertex).unwrap();
+        datastore.create_vertex(vertex).await.unwrap();
     }
 
     let mut vertex_ids: Vec<Uuid> = vertices.into_iter().map(|v| v.id).collect();

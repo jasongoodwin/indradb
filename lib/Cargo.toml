@@ -22,6 +22,7 @@ test-suite = []
 bench-suite = []
 
 [dependencies]
+async-trait = "0.1.52" # note there is a cost to use https://rust-lang.github.io/async-book/07_workarounds/05_async_in_traits.html
 byteorder = "^1.4.2"
 serde = { version = "^1.0.57", features = ["derive"] }
 serde_json = "^1.0.57"

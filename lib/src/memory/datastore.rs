@@ -12,6 +12,7 @@ use crate::{
     Json, NamedProperty, Vertex, VertexProperties, VertexProperty, VertexPropertyQuery, VertexQuery,
 };
 
+use async_trait::async_trait;
 use bincode::Error as BincodeError;
 use chrono::offset::Utc;
 use chrono::DateTime;
@@ -428,8 +429,9 @@ impl MemoryDatastore {
     }
 }
 
+#[async_trait]
 impl Datastore for MemoryDatastore {
-    fn sync(&self) -> Result<()> {
+    async fn sync(&self) -> Result<()> {
         if let Some(ref persist_path) = self.path {
             let temp_path = NamedTempFile::new().map_err(|err| Error::Datastore(Box::new(err)))?;
             let buf = BufWriter::new(temp_path.as_file());
@@ -442,7 +444,7 @@ impl Datastore for MemoryDatastore {
         Ok(())
     }
 
-    fn create_vertex(&self, vertex: &Vertex) -> Result<bool> {
+    async fn create_vertex(&self, vertex: &Vertex) -> Result<bool> {
         let mut datastore = self.datastore.write().unwrap();
         let mut inserted = false;
 
@@ -454,26 +456,26 @@ impl Datastore for MemoryDatastore {
         Ok(inserted)
     }
 
-    fn get_vertices(&self, q: VertexQuery) -> Result<Vec<Vertex>> {
+    async fn get_vertices(&self, q: VertexQuery) -> Result<Vec<Vertex>> {
         let datastore = self.datastore.read().unwrap();
         let iter = datastore.get_vertex_values_by_query(q)?;
         let iter = iter.map(|(uuid, t)| Vertex::with_id(uuid, t));
         Ok(iter.collect())
     }
 
-    fn delete_vertices(&self, q: VertexQuery) -> Result<()> {
+    async fn delete_vertices(&self, q: VertexQuery) -> Result<()> {
         let mut datastore = self.datastore.write().unwrap();
         let deletable_vertices = datastore.get_vertex_values_by_query(q)?.map(|(k, _)| k).collect();
         datastore.delete_vertices(deletable_vertices);
         Ok(())
     }
 
-    fn get_vertex_count(&self) -> Result<u64> {
+    async fn get_vertex_count(&self) -> Result<u64> {
         let datastore = self.datastore.read().unwrap();
         Ok(datastore.vertices.len() as u64)
     }
 
-    fn create_edge(&self, key: &EdgeKey) -> Result<bool> {
+    async fn create_edge(&self, key: &EdgeKey) -> Result<bool> {
         let mut datastore = self.datastore.write().unwrap();
 
         if !datastore.vertices.contains_key(&key.outbound_id) || !datastore.vertices.contains_key(&key.inbound_id) {
@@ -485,7 +487,7 @@ impl Datastore for MemoryDatastore {
         Ok(true)
     }
 
-    fn get_edges(&self, q: EdgeQuery) -> Result<Vec<Edge>> {
+    async fn get_edges(&self, q: EdgeQuery) -> Result<Vec<Edge>> {
         let edge_values: Vec<(EdgeKey, DateTime<Utc>)> = {
             let datastore = self.datastore.read().unwrap();
             let iter = datastore.get_edge_values_by_query(q)?;
@@ -498,14 +500,14 @@ impl Datastore for MemoryDatastore {
         Ok(iter.collect())
     }
 
-    fn delete_edges(&self, q: EdgeQuery) -> Result<()> {
+    async fn delete_edges(&self, q: EdgeQuery) -> Result<()> {
         let mut datastore = self.datastore.write().unwrap();
         let deletable_edges: Vec<EdgeKey> = datastore.get_edge_values_by_query(q)?.map(|(k, _)| k).collect();
         datastore.delete_edges(deletable_edges);
         Ok(())
     }
 
-    fn get_edge_count(&self, id: Uuid, t: Option<&Identifier>, direction: EdgeDirection) -> Result<u64> {
+    async fn get_edge_count(&self, id: Uuid, t: Option<&Identifier>, direction: EdgeDirection) -> Result<u64> {
         let datastore = self.datastore.read().unwrap();
 
         let lower_bound = match t {
@@ -530,7 +532,7 @@ impl Datastore for MemoryDatastore {
         Ok(range.count() as u64)
     }
 
-    fn get_vertex_properties(&self, q: VertexPropertyQuery) -> Result<Vec<VertexProperty>> {
+    async fn get_vertex_properties(&self, q: VertexPropertyQuery) -> Result<Vec<VertexProperty>> {
         let mut result = Vec::new();
         let datastore = self.datastore.read().unwrap();
         let vertex_values = datastore.get_vertex_values_by_query(q.inner)?;
@@ -546,7 +548,7 @@ impl Datastore for MemoryDatastore {
         Ok(result)
     }
 
-    fn get_all_vertex_properties(&self, q: VertexQuery) -> Result<Vec<VertexProperties>> {
+    async fn get_all_vertex_properties(&self, q: VertexQuery) -> Result<Vec<VertexProperties>> {
         let datastore = self.datastore.read().unwrap();
         let vertex_values = datastore.get_vertex_values_by_query(q)?;
 
@@ -567,7 +569,7 @@ impl Datastore for MemoryDatastore {
         Ok(result)
     }
 
-    fn set_vertex_properties(&self, q: VertexPropertyQuery, value: serde_json::Value) -> Result<()> {
+    async fn set_vertex_properties(&self, q: VertexPropertyQuery, value: serde_json::Value) -> Result<()> {
         let mut datastore = self.datastore.write().unwrap();
 
         let vertex_values: Vec<(Uuid, Identifier)> = datastore.get_vertex_values_by_query(q.inner)?.collect();
@@ -595,7 +597,7 @@ impl Datastore for MemoryDatastore {
         Ok(())
     }
 
-    fn delete_vertex_properties(&self, q: VertexPropertyQuery) -> Result<()> {
+    async fn delete_vertex_properties(&self, q: VertexPropertyQuery) -> Result<()> {
         let mut datastore = self.datastore.write().unwrap();
         let mut deletable_vertex_properties = Vec::<(Uuid, Identifier)>::new();
         for (id, _) in datastore.get_vertex_values_by_query(q.inner)? {
@@ -605,7 +607,7 @@ impl Datastore for MemoryDatastore {
         Ok(())
     }
 
-    fn get_edge_properties(&self, q: EdgePropertyQuery) -> Result<Vec<EdgeProperty>> {
+    async fn get_edge_properties(&self, q: EdgePropertyQuery) -> Result<Vec<EdgeProperty>> {
         let mut result = Vec::new();
         let datastore = self.datastore.read().unwrap();
         let edge_values = datastore.get_edge_values_by_query(q.inner)?;
@@ -621,7 +623,7 @@ impl Datastore for MemoryDatastore {
         Ok(result)
     }
 
-    fn get_all_edge_properties(&self, q: EdgeQuery) -> Result<Vec<EdgeProperties>> {
+    async fn get_all_edge_properties(&self, q: EdgeQuery) -> Result<Vec<EdgeProperties>> {
         let datastore = self.datastore.read().unwrap();
         let edge_values = datastore.get_edge_values_by_query(q)?;
 
@@ -644,7 +646,7 @@ impl Datastore for MemoryDatastore {
         Ok(result)
     }
 
-    fn set_edge_properties(&self, q: EdgePropertyQuery, value: serde_json::Value) -> Result<()> {
+    async fn set_edge_properties(&self, q: EdgePropertyQuery, value: serde_json::Value) -> Result<()> {
         let mut datastore = self.datastore.write().unwrap();
         let edge_values: Vec<(EdgeKey, DateTime<Utc>)> = datastore.get_edge_values_by_query(q.inner)?.collect();
 
@@ -671,7 +673,7 @@ impl Datastore for MemoryDatastore {
         Ok(())
     }
 
-    fn delete_edge_properties(&self, q: EdgePropertyQuery) -> Result<()> {
+    async fn delete_edge_properties(&self, q: EdgePropertyQuery) -> Result<()> {
         let mut datastore = self.datastore.write().unwrap();
         let edge_values: Vec<(EdgeKey, DateTime<Utc>)> = datastore.get_edge_values_by_query(q.inner)?.collect();
         let mut deletable_edge_properties = Vec::<(EdgeKey, Identifier)>::new();
@@ -682,7 +684,7 @@ impl Datastore for MemoryDatastore {
         Ok(())
     }
 
-    fn index_property(&self, name: Identifier) -> Result<()> {
+    async fn index_property(&self, name: Identifier) -> Result<()> {
         let mut datastore = self.datastore.write().unwrap();
 
         let mut property_container: HashMap<Json, HashSet<IndexedPropertyMember>> = HashMap::new();

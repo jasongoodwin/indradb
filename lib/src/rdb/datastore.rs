@@ -15,6 +15,7 @@ use crate::{
     VertexQuery,
 };
 
+use async_trait::async_trait;
 use chrono::offset::Utc;
 use chrono::DateTime;
 use rocksdb::{DBCompactionStyle, Options, WriteBatch, DB};
@@ -427,8 +428,9 @@ impl RocksdbDatastore {
     }
 }
 
+#[async_trait]
 impl Datastore for RocksdbDatastore {
-    fn sync(&self) -> Result<()> {
+    async fn sync(&self) -> Result<()> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -445,7 +447,7 @@ impl Datastore for RocksdbDatastore {
         Ok(())
     }
 
-    fn create_vertex(&self, vertex: &Vertex) -> Result<bool> {
+    async fn create_vertex(&self, vertex: &Vertex) -> Result<bool> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -461,7 +463,7 @@ impl Datastore for RocksdbDatastore {
         }
     }
 
-    fn get_vertices(&self, q: VertexQuery) -> Result<Vec<Vertex>> {
+    async fn get_vertices(&self, q: VertexQuery) -> Result<Vec<Vertex>> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -475,7 +477,7 @@ impl Datastore for RocksdbDatastore {
         iter.collect()
     }
 
-    fn delete_vertices(&self, q: VertexQuery) -> Result<()> {
+    async fn delete_vertices(&self, q: VertexQuery) -> Result<()> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -491,7 +493,7 @@ impl Datastore for RocksdbDatastore {
         Ok(())
     }
 
-    fn get_vertex_count(&self) -> Result<u64> {
+    async fn get_vertex_count(&self) -> Result<u64> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -500,7 +502,7 @@ impl Datastore for RocksdbDatastore {
         Ok(iterator.count() as u64)
     }
 
-    fn create_edge(&self, key: &EdgeKey) -> Result<bool> {
+    async fn create_edge(&self, key: &EdgeKey) -> Result<bool> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -517,7 +519,7 @@ impl Datastore for RocksdbDatastore {
         }
     }
 
-    fn get_edges(&self, q: EdgeQuery) -> Result<Vec<Edge>> {
+    async fn get_edges(&self, q: EdgeQuery) -> Result<Vec<Edge>> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -532,7 +534,7 @@ impl Datastore for RocksdbDatastore {
         iter.collect()
     }
 
-    fn delete_edges(&self, q: EdgeQuery) -> Result<()> {
+    async fn delete_edges(&self, q: EdgeQuery) -> Result<()> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -551,7 +553,7 @@ impl Datastore for RocksdbDatastore {
         Ok(())
     }
 
-    fn get_edge_count(&self, id: Uuid, t: Option<&Identifier>, direction: EdgeDirection) -> Result<u64> {
+    async fn get_edge_count(&self, id: Uuid, t: Option<&Identifier>, direction: EdgeDirection) -> Result<u64> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -566,7 +568,7 @@ impl Datastore for RocksdbDatastore {
         Ok(count as u64)
     }
 
-    fn get_vertex_properties(&self, q: VertexPropertyQuery) -> Result<Vec<VertexProperty>> {
+    async fn get_vertex_properties(&self, q: VertexPropertyQuery) -> Result<Vec<VertexProperty>> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -584,7 +586,7 @@ impl Datastore for RocksdbDatastore {
         Ok(properties)
     }
 
-    fn get_all_vertex_properties(&self, q: VertexQuery) -> Result<Vec<VertexProperties>> {
+    async fn get_all_vertex_properties(&self, q: VertexQuery) -> Result<Vec<VertexProperties>> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -607,7 +609,7 @@ impl Datastore for RocksdbDatastore {
         iter.collect()
     }
 
-    fn set_vertex_properties(&self, q: VertexPropertyQuery, value: serde_json::Value) -> Result<()> {
+    async fn set_vertex_properties(&self, q: VertexPropertyQuery, value: serde_json::Value) -> Result<()> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -623,7 +625,7 @@ impl Datastore for RocksdbDatastore {
         Ok(())
     }
 
-    fn delete_vertex_properties(&self, q: VertexPropertyQuery) -> Result<()> {
+    async fn delete_vertex_properties(&self, q: VertexPropertyQuery) -> Result<()> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -638,7 +640,7 @@ impl Datastore for RocksdbDatastore {
         Ok(())
     }
 
-    fn get_edge_properties(&self, q: EdgePropertyQuery) -> Result<Vec<EdgeProperty>> {
+    async fn get_edge_properties(&self, q: EdgePropertyQuery) -> Result<Vec<EdgeProperty>> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -657,7 +659,7 @@ impl Datastore for RocksdbDatastore {
         Ok(properties)
     }
 
-    fn get_all_edge_properties(&self, q: EdgeQuery) -> Result<Vec<EdgeProperties>> {
+    async fn get_all_edge_properties(&self, q: EdgeQuery) -> Result<Vec<EdgeProperties>> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -679,7 +681,7 @@ impl Datastore for RocksdbDatastore {
         iter.collect()
     }
 
-    fn set_edge_properties(&self, q: EdgePropertyQuery, value: serde_json::Value) -> Result<()> {
+    async fn set_edge_properties(&self, q: EdgePropertyQuery, value: serde_json::Value) -> Result<()> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -695,7 +697,7 @@ impl Datastore for RocksdbDatastore {
         Ok(())
     }
 
-    fn delete_edge_properties(&self, q: EdgePropertyQuery) -> Result<()> {
+    async fn delete_edge_properties(&self, q: EdgePropertyQuery) -> Result<()> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -712,7 +714,7 @@ impl Datastore for RocksdbDatastore {
 
     // We override the default `bulk_insert` implementation because further
     // optimization can be done by using `WriteBatch`s.
-    fn bulk_insert(&self, items: Vec<BulkInsertItem>) -> Result<()> {
+    async fn bulk_insert(&self, items: Vec<BulkInsertItem>) -> Result<()> {
         let db = self.db.clone();
         let indexed_properties = self.indexed_properties.read().unwrap();
         let db_ref = DBRef::new(&db, &indexed_properties);
@@ -750,7 +752,7 @@ impl Datastore for RocksdbDatastore {
         Ok(())
     }
 
-    fn index_property(&self, name: Identifier) -> Result<()> {
+    async fn index_property(&self, name: Identifier) -> Result<()> {
         let mut indexed_properties = self.indexed_properties.write().unwrap();
         if !indexed_properties.insert(name.clone()) {
             return Ok(());
