@@ -4,21 +4,22 @@ use crate::{
 
 use uuid::Uuid;
 
-pub fn should_handle_vertex_properties<D: Datastore>(datastore: &D) {
+pub async fn should_handle_vertex_properties<D: Datastore>(datastore: &D) {
     let t = Identifier::new("test_vertex_type").unwrap();
     let v = Vertex::new(t);
-    datastore.create_vertex(&v).unwrap();
+    datastore.create_vertex(&v).await.unwrap();
     let q = SpecificVertexQuery::single(v.id).property(Identifier::new("foo").unwrap());
 
     // Check to make sure there's no initial value
-    let result = datastore.get_vertex_properties(q.clone()).unwrap();
+    let result = datastore.get_vertex_properties(q.clone()).await.unwrap();
     assert_eq!(result.len(), 0);
 
     // Set and get the value as true
     datastore
         .set_vertex_properties(q.clone(), serde_json::Value::Bool(true))
+        .await
         .unwrap();
-    let result = datastore.get_vertex_properties(q.clone()).unwrap();
+    let result = datastore.get_vertex_properties(q.clone()).await.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].id, v.id);
     assert_eq!(result[0].value, serde_json::Value::Bool(true));
@@ -26,32 +27,33 @@ pub fn should_handle_vertex_properties<D: Datastore>(datastore: &D) {
     // Set and get the value as false
     datastore
         .set_vertex_properties(q.clone(), serde_json::Value::Bool(false))
+        .await
         .unwrap();
-    let result = datastore.get_vertex_properties(q.clone()).unwrap();
+    let result = datastore.get_vertex_properties(q.clone()).await.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].id, v.id);
     assert_eq!(result[0].value, serde_json::Value::Bool(false));
 
     // Delete & check that it's deleted
-    datastore.delete_vertex_properties(q.clone()).unwrap();
-    let result = datastore.get_vertex_properties(q).unwrap();
+    datastore.delete_vertex_properties(q.clone()).await.unwrap();
+    let result = datastore.get_vertex_properties(q).await.unwrap();
     assert_eq!(result.len(), 0);
 }
 
-pub fn should_get_all_vertex_properties<D: Datastore>(datastore: &D) {
+pub async fn should_get_all_vertex_properties<D: Datastore>(datastore: &D) {
     let t = Identifier::new("a_vertex").unwrap();
     let v1 = &Vertex::new(t.clone());
     let v2 = &Vertex::new(t.clone());
     let v3 = &Vertex::new(t);
-    datastore.create_vertex(v1).unwrap();
-    datastore.create_vertex(v2).unwrap();
-    datastore.create_vertex(v3).unwrap();
+    datastore.create_vertex(v1).await.unwrap();
+    datastore.create_vertex(v2).await.unwrap();
+    datastore.create_vertex(v3).await.unwrap();
     let q1 = SpecificVertexQuery::single(v1.id);
     let q2 = SpecificVertexQuery::single(v2.id);
     let q3 = SpecificVertexQuery::single(v3.id);
 
     // Check to make sure there are no initial properties
-    let all_result = datastore.get_all_vertex_properties(q2.clone().into()).unwrap();
+    let all_result = datastore.get_all_vertex_properties(q2.clone().into()).await.unwrap();
     assert_eq!(all_result.len(), 1);
     assert_eq!(all_result[0].props.len(), 0);
 
@@ -61,19 +63,21 @@ pub fn should_get_all_vertex_properties<D: Datastore>(datastore: &D) {
             q2.clone().property(Identifier::new("a").unwrap()),
             serde_json::Value::Bool(false),
         )
+        .await
         .unwrap();
     datastore
         .set_vertex_properties(
             q2.clone().property(Identifier::new("b").unwrap()),
             serde_json::Value::Bool(true),
         )
+        .await
         .unwrap();
 
-    let result_1 = datastore.get_all_vertex_properties(q1.into()).unwrap();
+    let result_1 = datastore.get_all_vertex_properties(q1.into()).await.unwrap();
     assert_eq!(result_1.len(), 1);
     assert_eq!(result_1[0].props.len(), 0);
 
-    let result_2 = datastore.get_all_vertex_properties(q2.into()).unwrap();
+    let result_2 = datastore.get_all_vertex_properties(q2.into()).await.unwrap();
     assert_eq!(result_2.len(), 1);
     assert_eq!(result_2[0].props.len(), 2);
     assert_eq!(result_2[0].props[0].name, Identifier::new("a").unwrap());
@@ -81,53 +85,55 @@ pub fn should_get_all_vertex_properties<D: Datastore>(datastore: &D) {
     assert_eq!(result_2[0].props[1].name, Identifier::new("b").unwrap());
     assert_eq!(result_2[0].props[1].value, serde_json::Value::Bool(true));
 
-    let result_3 = datastore.get_all_vertex_properties(q3.into()).unwrap();
+    let result_3 = datastore.get_all_vertex_properties(q3.into()).await.unwrap();
     assert_eq!(result_3.len(), 1);
     assert_eq!(result_3[0].props.len(), 0);
 }
 
-pub fn should_not_set_invalid_vertex_properties<D: Datastore>(datastore: &D) {
+pub async fn should_not_set_invalid_vertex_properties<D: Datastore>(datastore: &D) {
     let q = SpecificVertexQuery::single(Uuid::default()).property(Identifier::new("foo").unwrap());
     datastore
         .set_vertex_properties(q.clone(), serde_json::Value::Null)
+        .await
         .unwrap();
-    let result = datastore.get_vertex_properties(q).unwrap();
+    let result = datastore.get_vertex_properties(q).await.unwrap();
     assert_eq!(result.len(), 0);
 }
 
-pub fn should_not_delete_invalid_vertex_properties<D: Datastore>(datastore: &D) {
+pub async fn should_not_delete_invalid_vertex_properties<D: Datastore>(datastore: &D) {
     let q = SpecificVertexQuery::single(Uuid::default()).property(Identifier::new("foo").unwrap());
 
-    datastore.delete_vertex_properties(q).unwrap();
+    datastore.delete_vertex_properties(q).await.unwrap();
 
     let v = Vertex::new(Identifier::new("foo").unwrap());
-    datastore.create_vertex(&v).unwrap();
+    datastore.create_vertex(&v).await.unwrap();
 
     let q = SpecificVertexQuery::single(v.id).property(Identifier::new("foo").unwrap());
-    datastore.delete_vertex_properties(q).unwrap();
+    datastore.delete_vertex_properties(q).await.unwrap();
 }
 
-pub fn should_handle_edge_properties<D: Datastore>(datastore: &D) {
+pub async fn should_handle_edge_properties<D: Datastore>(datastore: &D) {
     let vertex_t = Identifier::new("test_vertex_type").unwrap();
     let outbound_v = Vertex::new(vertex_t.clone());
     let inbound_v = Vertex::new(vertex_t);
-    datastore.create_vertex(&outbound_v).unwrap();
-    datastore.create_vertex(&inbound_v).unwrap();
+    datastore.create_vertex(&outbound_v).await.unwrap();
+    datastore.create_vertex(&inbound_v).await.unwrap();
     let edge_t = Identifier::new("test_edge_type").unwrap();
     let key = EdgeKey::new(outbound_v.id, edge_t, inbound_v.id);
     let q = SpecificEdgeQuery::single(key.clone()).property(Identifier::new("edge-property").unwrap());
 
-    datastore.create_edge(&key).unwrap();
+    datastore.create_edge(&key).await.unwrap();
 
     // Check to make sure there's no initial value
-    let result = datastore.get_edge_properties(q.clone()).unwrap();
+    let result = datastore.get_edge_properties(q.clone()).await.unwrap();
     assert_eq!(result.len(), 0);
 
     // Set and get the value as true
     datastore
         .set_edge_properties(q.clone(), serde_json::Value::Bool(true))
+        .await
         .unwrap();
-    let result = datastore.get_edge_properties(q.clone()).unwrap();
+    let result = datastore.get_edge_properties(q.clone()).await.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].key, key);
     assert_eq!(result[0].value, serde_json::Value::Bool(true));
@@ -135,46 +141,49 @@ pub fn should_handle_edge_properties<D: Datastore>(datastore: &D) {
     // Set and get the value as false
     datastore
         .set_edge_properties(q.clone(), serde_json::Value::Bool(false))
+        .await
         .unwrap();
-    let result = datastore.get_edge_properties(q.clone()).unwrap();
+    let result = datastore.get_edge_properties(q.clone()).await.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].key, key);
     assert_eq!(result[0].value, serde_json::Value::Bool(false));
 
     // Delete & check that it's deleted
-    datastore.delete_edge_properties(q.clone()).unwrap();
-    let result = datastore.get_edge_properties(q).unwrap();
+    datastore.delete_edge_properties(q.clone()).await.unwrap();
+    let result = datastore.get_edge_properties(q).await.unwrap();
     assert_eq!(result.len(), 0);
 }
 
-pub fn should_get_all_edge_properties<D: Datastore>(datastore: &D) {
+pub async fn should_get_all_edge_properties<D: Datastore>(datastore: &D) {
     let vertex_t = Identifier::new("test_vertex_type").unwrap();
     let outbound_v = Vertex::new(vertex_t.clone());
     let inbound_v = Vertex::new(vertex_t);
-    datastore.create_vertex(&outbound_v).unwrap();
-    datastore.create_vertex(&inbound_v).unwrap();
+    datastore.create_vertex(&outbound_v).await.unwrap();
+    datastore.create_vertex(&inbound_v).await.unwrap();
     let edge_t = Identifier::new("test_edge_type").unwrap();
     let key = EdgeKey::new(outbound_v.id, edge_t, inbound_v.id);
     let eq = SpecificEdgeQuery::single(key.clone());
     let q1 = eq.clone().property(Identifier::new("edge-prop-1").unwrap());
     let q2 = eq.clone().property(Identifier::new("edge-prop-2").unwrap());
 
-    datastore.create_edge(&key).unwrap();
+    datastore.create_edge(&key).await.unwrap();
 
     // Check to make sure there's no initial value
-    let result = datastore.get_all_edge_properties(eq.clone().into()).unwrap();
+    let result = datastore.get_all_edge_properties(eq.clone().into()).await.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].props.len(), 0);
 
     // Set and get the value as true
     datastore
         .set_edge_properties(q1.clone(), serde_json::Value::Bool(false))
+        .await
         .unwrap();
     datastore
         .set_edge_properties(q2.clone(), serde_json::Value::Bool(true))
+        .await
         .unwrap();
 
-    let result = datastore.get_all_edge_properties(eq.clone().into()).unwrap();
+    let result = datastore.get_all_edge_properties(eq.clone().into()).await.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].props.len(), 2);
     assert_eq!(result[0].props[0].name, Identifier::new("edge-prop-1").unwrap());
@@ -183,38 +192,41 @@ pub fn should_get_all_edge_properties<D: Datastore>(datastore: &D) {
     assert_eq!(result[0].props[1].value, serde_json::Value::Bool(true));
 
     // Delete & check that they are deleted
-    datastore.delete_edge_properties(q1).unwrap();
-    datastore.delete_edge_properties(q2).unwrap();
+    datastore.delete_edge_properties(q1).await.unwrap();
+    datastore.delete_edge_properties(q2).await.unwrap();
 
-    let result = datastore.get_all_edge_properties(eq.into()).unwrap();
+    let result = datastore.get_all_edge_properties(eq.into()).await.unwrap();
     assert_eq!(result.len(), 1);
     assert_eq!(result[0].props.len(), 0);
 }
 
-pub fn should_not_set_invalid_edge_properties<D: Datastore>(datastore: &D) {
+pub async fn should_not_set_invalid_edge_properties<D: Datastore>(datastore: &D) {
     let key = EdgeKey::new(Uuid::default(), Identifier::new("foo").unwrap(), Uuid::default());
     let q = SpecificEdgeQuery::single(key).property(Identifier::new("bar").unwrap());
     datastore
         .set_edge_properties(q.clone(), serde_json::Value::Null)
+        .await
         .unwrap();
-    let result = datastore.get_edge_properties(q).unwrap();
+    let result = datastore.get_edge_properties(q).await.unwrap();
     assert_eq!(result.len(), 0);
 }
 
-pub fn should_not_delete_invalid_edge_properties<D: Datastore>(datastore: &D) {
+pub async fn should_not_delete_invalid_edge_properties<D: Datastore>(datastore: &D) {
     let key = EdgeKey::new(Uuid::default(), Identifier::new("foo").unwrap(), Uuid::default());
     datastore
         .delete_edge_properties(SpecificEdgeQuery::single(key).property(Identifier::new("bar").unwrap()))
+        .await
         .unwrap();
 
     let outbound_v = Vertex::new(Identifier::new("foo").unwrap());
     let inbound_v = Vertex::new(Identifier::new("foo").unwrap());
-    datastore.create_vertex(&outbound_v).unwrap();
-    datastore.create_vertex(&inbound_v).unwrap();
+    datastore.create_vertex(&outbound_v).await.unwrap();
+    datastore.create_vertex(&inbound_v).await.unwrap();
 
     let key = EdgeKey::new(outbound_v.id, Identifier::new("baz").unwrap(), inbound_v.id);
-    datastore.create_edge(&key).unwrap();
+    datastore.create_edge(&key).await.unwrap();
     datastore
         .delete_edge_properties(SpecificEdgeQuery::single(key).property(Identifier::new("bleh").unwrap()))
+        .await
         .unwrap();
 }

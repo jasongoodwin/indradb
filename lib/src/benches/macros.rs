@@ -5,7 +5,7 @@ pub use test::Bencher;
 macro_rules! define_bench {
     ($name:ident, $datastore_constructor:expr) => {
         #[bench]
-        fn $name(b: &mut $crate::benches::Bencher) {
+        async fn $name(b: &mut $crate::benches::Bencher) {
             let mut datastore = $datastore_constructor;
             $crate::benches::$name(b, &mut datastore);
         }

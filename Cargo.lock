@@ -40,9 +40,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.51"
+version = "0.1.52"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44318e776df68115a881de9a8fd1b9e53368d7a4a5ce4cc48517da3393233a5e"
+checksum = "061a7acccaa286c011ddc30970520b98fa40e00c9d644633fb26b5fc63a265e3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -408,6 +408,7 @@ dependencies = [
 name = "indradb-lib"
 version = "3.0.0"
 dependencies = [
+ "async-trait",
  "bincode",
  "byteorder",
  "chrono",
@@ -420,15 +421,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "indradb-plugin-hello-world"
-version = "0.1.0"
-dependencies = [
- "indradb-lib",
- "indradb-plugin-host",
- "serde_json",
-]
-
-[[package]]
 name = "indradb-plugin-host"
 version = "0.1.0"
 dependencies = [
@@ -437,15 +429,6 @@ dependencies = [
  "serde_json",
  "threadpool",
  "uuid",
-]
-
-[[package]]
-name = "indradb-plugin-naive-vertex-count"
-version = "0.1.0"
-dependencies = [
- "indradb-lib",
- "indradb-plugin-host",
- "serde_json",
 ]
 
 [[package]]
