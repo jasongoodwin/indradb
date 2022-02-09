@@ -205,13 +205,13 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
     }
 
     async fn sync(&self, _: Request<()>) -> Result<Response<()>, Status> {
-        map_indradb_result(self.datastore.sync())?;
+        map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.sync()).await?)?;
         Ok(Response::new(()))
     }
 
     async fn create_vertex(&self, request: Request<crate::Vertex>) -> Result<Response<crate::CreateResponse>, Status> {
         let vertex = map_conversion_result(request.into_inner().try_into())?;
-        let res = map_indradb_result(self.datastore.create_vertex(&vertex))?;
+        let res = map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.create_vertex(&vertex)).await?)?;
         Ok(Response::new(crate::CreateResponse { created: res }))
     }
 
@@ -220,7 +220,7 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         request: Request<crate::Identifier>,
     ) -> Result<Response<crate::Uuid>, Status> {
         let t = map_conversion_result(request.into_inner().try_into())?;
-        let res = map_indradb_result(self.datastore.create_vertex_from_type(t))?;
+        let res = map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.create_vertex_from_type(t)).await?)?;
         Ok(Response::new(res.into()))
     }
 
@@ -233,25 +233,25 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         let q: indradb::VertexQuery = map_conversion_result(request.into_inner().try_into())?;
         let (tx, rx) = mpsc::channel(CHANNEL_CAPACITY);
         tokio::spawn(async move {
-            send(tx, datastore.get_vertices(q)).await;
+            send(tx, tokio::runtime::Handle::current().spawn_blocking(datastore.get_vertices(q)).await?).await;
         });
         Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
     }
 
     async fn delete_vertices(&self, request: Request<crate::VertexQuery>) -> Result<Response<()>, Status> {
         let q: indradb::VertexQuery = map_conversion_result(request.into_inner().try_into())?;
-        map_indradb_result(self.datastore.delete_vertices(q))?;
+        map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.delete_vertices(q)).await?)?;
         Ok(Response::new(()))
     }
 
     async fn get_vertex_count(&self, _: Request<()>) -> Result<Response<crate::CountResponse>, Status> {
-        let res = map_indradb_result(self.datastore.get_vertex_count())?;
+        let res = map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.get_vertex_count()).await?)?;
         Ok(Response::new(crate::CountResponse { count: res }))
     }
 
     async fn create_edge(&self, request: Request<crate::EdgeKey>) -> Result<Response<crate::CreateResponse>, Status> {
         let key = map_conversion_result(request.into_inner().try_into())?;
-        let res = map_indradb_result(self.datastore.create_edge(&key))?;
+        let res = map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.create_edge(&key)).await?)?;
         Ok(Response::new(crate::CreateResponse { created: res }))
     }
 
@@ -261,14 +261,14 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         let q: indradb::EdgeQuery = map_conversion_result(request.into_inner().try_into())?;
         let (tx, rx) = mpsc::channel(CHANNEL_CAPACITY);
         tokio::spawn(async move {
-            send(tx, datastore.get_edges(q)).await;
+            send(tx, tokio::runtime::Handle::current().spawn_blocking(datastore.get_edges(q)).await?)?;
         });
         Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
     }
 
     async fn delete_edges(&self, request: Request<crate::EdgeQuery>) -> Result<Response<()>, Status> {
         let q: indradb::EdgeQuery = map_conversion_result(request.into_inner().try_into())?;
-        map_indradb_result(self.datastore.delete_edges(q))?;
+        map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.delete_edges(q)).await?)?;
         Ok(Response::new(()))
     }
 
@@ -277,7 +277,7 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         request: Request<crate::GetEdgeCountRequest>,
     ) -> Result<Response<crate::CountResponse>, Status> {
         let (id, t, direction) = map_conversion_result(request.into_inner().try_into())?;
-        let res = map_indradb_result(self.datastore.get_edge_count(id, t.as_ref(), direction))?;
+        let res = map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.get_edge_count(id, t.as_ref(), direction)).await?)?;
         Ok(Response::new(crate::CountResponse { count: res }))
     }
 
@@ -291,7 +291,7 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         let q = map_conversion_result(request.into_inner().try_into())?;
         let (tx, rx) = mpsc::channel(CHANNEL_CAPACITY);
         tokio::spawn(async move {
-            send(tx, datastore.get_vertex_properties(q)).await;
+            send(tx, tokio::runtime::Handle::current().spawn_blocking(datastore.get_vertex_properties(q)).await?).await;
         });
         Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
     }
@@ -306,7 +306,7 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         let q: indradb::VertexQuery = map_conversion_result(request.into_inner().try_into())?;
         let (tx, rx) = mpsc::channel(CHANNEL_CAPACITY);
         tokio::spawn(async move {
-            send(tx, datastore.get_all_vertex_properties(q)).await;
+            send(tx, tokio::runtime::Handle::current().spawn_blocking(datastore.get_all_vertex_properties(q)).await?).await;
         });
         Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
     }
@@ -316,7 +316,7 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         request: Request<crate::SetVertexPropertiesRequest>,
     ) -> Result<Response<()>, Status> {
         let (q, value) = map_conversion_result(request.into_inner().try_into())?;
-        map_indradb_result(self.datastore.set_vertex_properties(q, value))?;
+        map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.set_vertex_properties(q, value)).await?)?;
         Ok(Response::new(()))
     }
 
@@ -325,7 +325,7 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         request: Request<crate::VertexPropertyQuery>,
     ) -> Result<Response<()>, Status> {
         let q = map_conversion_result(request.into_inner().try_into())?;
-        map_indradb_result(self.datastore.delete_vertex_properties(q))?;
+        map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.delete_vertex_properties(q)).await?)?;
         Ok(Response::new(()))
     }
 
@@ -339,7 +339,7 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         let q: indradb::EdgePropertyQuery = map_conversion_result(request.into_inner().try_into())?;
         let (tx, rx) = mpsc::channel(CHANNEL_CAPACITY);
         tokio::spawn(async move {
-            send(tx, datastore.get_edge_properties(q)).await;
+            send(tx, tokio::runtime::Handle::current().spawn_blocking(datastore.get_edge_properties(q)).await?).await;
         });
         Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
     }
@@ -354,7 +354,7 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         let q: indradb::EdgeQuery = map_conversion_result(request.into_inner().try_into())?;
         let (tx, rx) = mpsc::channel(CHANNEL_CAPACITY);
         tokio::spawn(async move {
-            send(tx, datastore.get_all_edge_properties(q)).await;
+            send(tx, tokio::runtime::Handle::current().spawn_blocking(datastore.get_all_edge_properties(q)).await?).await;
         });
         Ok(Response::new(Box::pin(ReceiverStream::new(rx))))
     }
@@ -364,13 +364,13 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         request: Request<crate::SetEdgePropertiesRequest>,
     ) -> Result<Response<()>, Status> {
         let (q, value) = map_conversion_result(request.into_inner().try_into())?;
-        map_indradb_result(self.datastore.set_edge_properties(q, value))?;
+        map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.set_edge_properties(q, value)).await?)?;
         Ok(Response::new(()))
     }
 
     async fn delete_edge_properties(&self, request: Request<crate::EdgePropertyQuery>) -> Result<Response<()>, Status> {
         let q = map_conversion_result(request.into_inner().try_into())?;
-        map_indradb_result(self.datastore.delete_edge_properties(q))?;
+        map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.delete_edge_properties(q)).await?)?;
         Ok(Response::new(()))
     }
 
@@ -387,13 +387,13 @@ impl<D: indradb::Datastore + Send + Sync + 'static> crate::indra_db_server::Indr
         };
 
         let datastore = self.datastore.clone();
-        map_indradb_result(datastore.bulk_insert(items))?;
+        map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(datastore.bulk_insert(items)).await?)?;
         Ok(Response::new(()))
     }
 
     async fn index_property(&self, request: Request<crate::IndexPropertyRequest>) -> Result<Response<()>, Status> {
         let name: indradb::Identifier = map_conversion_result(request.into_inner().try_into())?;
-        map_indradb_result(self.datastore.clone().index_property(name))?;
+        map_indradb_result(tokio::runtime::Handle::current().spawn_blocking(self.datastore.clone().index_property(name)).await?)?;
         Ok(Response::new(()))
     }
 
